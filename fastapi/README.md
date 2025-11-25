@@ -67,7 +67,7 @@ Create a `.env` file inside the `fastapi/` directory:
 
 ```env
 # Oracle DB
-ORACLE_USER=INTERN
+ORACLE_USER=ADMIN
 ORACLE_PASSWORD=your_db_password
 ORACLE_DSN=your_host:1521/your_service
 
