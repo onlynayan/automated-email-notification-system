@@ -90,7 +90,7 @@ flowchart TD
     G --> H[Done]
 
     %% Retry Logic
-    X[Scheduler Job (Every 5 min)] --> Y[Find UNSENT/FAILED Emails]
+    X[Scheduler Job - Every 5 min] --> Y[Find UNSENT or FAILED Emails]
     Y --> D
 ```
 
