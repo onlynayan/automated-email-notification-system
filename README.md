@@ -1,51 +1,56 @@
 # 🚀 Automated Email Notification System
 
-A fully automated, production-ready email notification system integrating:
+A fully automated, production-ready email delivery workflow integrating:
 
-- **Oracle Database (Triggers, Procedures, Scheduler Jobs)**
-- **Python FastAPI Microservice**
-- **Zoho Mail API (OAuth2)**
-- **Oracle REST + Automation**
-- **End‑to‑End Email Delivery Workflow**
+* **Oracle Database**
+* **Oracle Triggers & Scheduler Jobs**
+* **Python FastAPI Microservice**
+* **Zoho Mail API (OAuth2)**
 
-This system automatically sends emails whenever a new row is inserted into the Oracle table.  
-If any email fails, a scheduler job retries it every 5 minutes.
+This system automatically sends emails when a new record is inserted into the Oracle table.
+If an email fails, a scheduler job retries it automatically every 5 minutes.
 
 ---
 
 # 📌 Features
 
-### ✅ Real-time email sending
-Triggered immediately after an INSERT in Oracle.
+### 🔹 Real-time automated email sending
 
-### ✅ Automated retry mechanism
-Scheduler job checks all pending/failed emails and resends them.
+Triggered instantly after an INSERT operation in Oracle.
 
-### ✅ FastAPI microservice
-Handles sending emails using Zoho Mail API with OAuth tokens.
+### 🔹 Background retry scheduler
 
-### ✅ Secure & modular
-Environment variables, packaged SQL scripts, and production-safe configuration.
+A DBMS Scheduler job reprocesses **FAILED** or **PENDING** emails every 5 minutes.
 
-### ✅ Supports:
-- HTML emails  
-- CC/BCC  
-- File attachments (path-based)  
-- Zoho Mail API (OAuth Refresh Token → Access Token)  
-- Oracle connection pooling  
-- Logging email status  
+### 🔹 FastAPI microservice
+
+Receives `email_id`, fetches data from Oracle, and sends email using Zoho Mail API.
+
+### 🔹 Email capabilities
+
+* HTML content
+* CC / BCC
+* File attachments (path-based)
+* OAuth2 Zoho authentication
+
+### 🔹 Database tracking
+
+Updates:
+
+* `LAST_UPDATE`
+* `LAST_UPDATE_DATE`
 
 ---
 
-# 📂 Project Structure
+# 📂 Folder Structure
 
 ```
 automated-email-notification-system/
 │
 ├── fastapi/
-│   ├── app.py               # Main FastAPI service
-│   ├── db.py                # Oracle DB pool
-│   ├── email_sender.py      # Zoho email logic
+│   ├── app.py
+│   ├── db.py
+│   ├── email_sender.py
 │   ├── .env.example
 │   ├── requirements.txt
 │   └── README.md
@@ -59,119 +64,126 @@ automated-email-notification-system/
 │   └── README.md
 │
 ├── apex/
-│   └── (APEX-related documentation if any)
+│   └── (APEX REST or documentation if any)
 │
 ├── .env.example
 ├── .gitignore
-└── README.md   <--- this file
+└── README.md   ← this file
 ```
 
 ---
 
 # 🧩 System Architecture
 
+### ✔ GitHub-valid Mermaid diagram
+
+(no `subgraph`, no unsupported syntax)
+
 ```mermaid
 flowchart TD
-    A[Insert into EMAIL_NOTIFICATION] --> B[Oracle BEFORE INSERT Trigger]
-    B --> C[Sequence Assigns ID]
-    C --> D[AFTER INSERT Trigger]
-    D --> E[Procedure SEND_EMAIL_REQUEST]
-    E --> F[FastAPI POST /send-email]
-    F --> G[Fetch row from Oracle DB]
-    G --> H[Zoho Mail API]
-    H --> I[Email Sent]
-    I --> J[Update LAST_UPDATE='SENT']
+    A[Insert into EMAIL_NOTIFICATION] --> B[BEFORE INSERT Trigger - Assign ID]
+    B --> C[AFTER INSERT Trigger - Call SEND_EMAIL_REQUEST]
+    C --> D[FastAPI /send-email Endpoint]
+    D --> E[Fetch Email Row from Oracle DB]
+    E --> F[Send Email via Zoho Mail API]
+    F --> G[Update LAST_UPDATE = 'SENT']
+    G --> H[Done]
 
-    subgraph Scheduler (Every 5 min)
-       K[Check pending emails]
-       K --> E
-    end
+    %% Retry Logic
+    X[Scheduler Job (Every 5 min)] --> Y[Find UNSENT/FAILED Emails]
+    Y --> D
 ```
+
+✔ This diagram renders perfectly on GitHub.
 
 ---
 
-# 📬 Email Flow (Step-by-Step)
+# 📬 Email Workflow (Step-by-Step)
 
-### 1️⃣ User inserts a record into Oracle table
-```
-INSERT INTO INTERN.EMAIL_NOTIFICATION (EMAIL, SUBJECT, MESSAGE)
-VALUES ('user@example.com', 'Hello', '<h2>Welcome</h2>');
+### 1️⃣ Insert an email record
+
+```sql
+INSERT INTO EMAIL_NOTIFICATION (EMAIL, SUBJECT, MESSAGE)
+VALUES ('test@example.com','Hello','<h2>Welcome</h2>');
 ```
 
-### 2️⃣ BEFORE trigger assigns auto sequence ID  
-### 3️⃣ AFTER trigger calls:
-```
+### 2️⃣ BEFORE INSERT trigger assigns sequence ID
+
+### 3️⃣ AFTER INSERT trigger runs:
+
+```sql
 SEND_EMAIL_REQUEST(:NEW.ID);
 ```
 
 ### 4️⃣ FastAPI receives:
+
 ```json
-{
-  "email_id": 12
-}
+{ "email_id": 12 }
 ```
 
-### 5️⃣ FastAPI fetches row → sends email via Zoho Mail API  
+### 5️⃣ FastAPI fetches row → sends email via Zoho API
+
 ### 6️⃣ Updates:
+
 ```
 LAST_UPDATE = 'SENT'
-LAST_UPDATE_DATE = SYSDATE
 ```
 
-If sending fails:
+### 7️⃣ If failed:
+
 ```
 LAST_UPDATE = 'FAILED'
 ```
 
-### 7️⃣ Scheduler job retries FAILED emails every 5 minutes.
+### 8️⃣ Scheduler job retries failed emails every 5 minutes.
 
 ---
 
 # 🛠 Oracle Components
 
-### ✔ Table  
+### 📄 Table
+
 `sql/email_notification.sql`
 
-### ✔ Sequence  
+### 📄 Sequence
+
 `sql/email_notificaion_seq.sql`
 
-### ✔ Triggers  
-- BEFORE INSERT (assign ID)
-- AFTER INSERT (call FastAPI)
+### 📄 Triggers
 
 `sql/email_notification_trigger.sql`
 
-### ✔ Procedure  
-Calls FastAPI using UTL_HTTP
+### 📄 Procedure (calls FastAPI)
 
 `sql/email_notification_procedure.sql`
 
-### ✔ Scheduler Job  
-Retries pending emails every 5 minutes
+### 📄 Scheduler (retry failed emails)
 
 `sql/scheduler_pending_emails.sql`
 
 ---
 
-# 🔧 FastAPI Microservice
+# ⚙ FastAPI Microservice
 
-### Start service:
-```
+Start API:
+
+```bash
 uvicorn app:app --host 0.0.0.0 --port 8000
 ```
 
-### Endpoints
+### Endpoints:
 
-| Method | Endpoint       | Description |
-|--------|----------------|-------------|
-| GET    | `/`            | Health check |
-| POST   | `/send-email` | Sends an email using email_id |
+| Method | URL           | Description                |
+| ------ | ------------- | -------------------------- |
+| GET    | `/`           | Health check               |
+| POST   | `/send-email` | Sends email using email_id |
 
 ---
 
-# 📦 Environment Variables
+# 🔧 Environment Variables
 
-### Global `.env.example`
+`.env.example` (root or fastapi folder):
+
 ```
 ORACLE_USER=
 ORACLE_PASSWORD=
@@ -184,32 +196,9 @@ ZOHO_ACCOUNT_ID=
 ZOHO_FROM_ADDRESS=
 ```
 
-⚠️ Never upload your real `.env`.
-
 ---
 
-# 🚀 Deployment Options
+# 👤 Author
 
-- Windows or Linux FastAPI deployment
-- Oracle DB local/remote
-- Docker-ready (optional)
-- Supports internal networks (192.168.x.x)
-
----
-
-# 🧑‍💻 Author
-
-Developed by **Nayan Das**  
-A production-grade example of Oracle + Python FastAPI + Zoho automation.
-
----
-
-# ⭐ Contribution
-
-Feel free to fork the repo, submit issues, or open pull requests.
-
----
-
-# 📜 License
-
-MIT License (Recommended to add)
+Developed by **Nayan Das**
+Enterprise-grade automation with Oracle Database + FastAPI + Zoho API.
